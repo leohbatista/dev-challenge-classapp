@@ -14,8 +14,6 @@ var outputData = [];
 // Reading and parsing data from CSV file
 csv
     .fromPath(INPUT_PATH)
-    .on("start", function () {
-    })
     .on("data", function (data) {
         inputData.push(data); 
     })
@@ -58,35 +56,35 @@ function extractCSVDataToJSON(csvData) {
     dataRows.forEach(element => {        
         let flagNewPerson = false;
 
-        // Check if already exists an object for the person
+        // Check if already exists an object for the person searching by "eid"
         var personData = lodash.find(outputData,function(person) {
-            return person.fullname === element[0];
+            return person.eid === element[1];
         });
 
-        // If don't exist an object, creates it and set the "fullname" property
+        // If don't exist an object, creates it and set the "eid" and default properties
         if (personData == undefined) { 
             flagNewPerson = true;
             personData = { 
-                "fullname": element[0],
+                "eid": element[1],
                 "invisible": false,
                 "see_all": false
             };
             
         }
 
-        // Set the person "eid" property
-        personData.eid = element[1];
+        // Set the person "fullname" property
+        personData.fullname = element[0];
 
         // Set the person "invisible" property
         let invisible = element[element.length-2];
-        if(invisible != '') {
-            personData.invisible == 1 ? true : false;
+        if(invisible !== '') {
+            invisible == 1 ? personData.invisible = true : personData.invisible = false;
         }
 
         // Set the person "see_all" property
         let seeAll = element[element.length-1];
-        if(seeAll != '') {
-            personData.see_all === 'yes' ? true : false;
+        if(seeAll !== '') {
+            seeAll === 'yes' ? personData.see_all = true : personData.see_all = false;
         }
 
         console.log(personData);
@@ -94,6 +92,8 @@ function extractCSVDataToJSON(csvData) {
             outputData.push(personData);            
         }
     });
+    
+    console.log('Finish parsing data!');
 
     /*
     let test = JSON.parse(JSON.stringify(tagInfo[5]));
@@ -103,5 +103,9 @@ function extractCSVDataToJSON(csvData) {
 }
 
 function generateOutputFile(output) {
+    fs.writeFile(OUTPUT_PATH,JSON.stringify(output),(err) =>{
+        if (err) throw err;
+        console.log('Output written to file!');
+    });
     console.log(output);
 }
