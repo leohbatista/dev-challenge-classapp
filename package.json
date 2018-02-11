@@ -1,0 +1,16 @@
+{
+    "name": "dev_challenge_classapp",
+    "version": "0.0.1",
+    "description": "Dev Challenge ClassApp",
+    "author": "Leonardo Batista <leonardohenriquebatista@gmail.com>",
+    "main": "dev-challenge.js",
+    "scripts": {
+        "start": "node dev-challenge.js"
+    },
+    "dependencies": {
+        "csv": "^2.0.0",
+        "fast-csv": "^2.4.1",
+        "google-libphonenumber": "^3.0.11",
+        "lodash": "^4.17.5"
+    }
+}
