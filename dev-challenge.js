@@ -1,6 +1,6 @@
 // Module imports
 const fs = require('fs');
-const lodash = require('lodash');
+const _ = require('lodash');
 const libPhone = require('google-libphonenumber');
 const csv = require("fast-csv");
 
@@ -31,8 +31,11 @@ function extractCSVDataToJSON(csvData) {
     var header = csvData[0];
     var dataRows = csvData.slice(1);
     var tagInfo = [];
+    var classIndexes = [];
+    var addressIndexes = [];
 
     // Check each column in the header
+    let counter = 0;
     header.forEach(element => {
         // Separate headers and tags
         element = element.replace(', ',',');
@@ -46,26 +49,33 @@ function extractCSVDataToJSON(csvData) {
             } else if (parts[0] === 'email') {
                 tagInfo.push({ "type": 'email', "tags":tags });
             }
+            addressIndexes.push(counter);
         } else {
             tagInfo.push(null);
-        }        
+            
+            if(parts[0] === 'class') {
+                classIndexes.push(counter);  
+            }
+        }    
         
+        counter++;
     });
 
     // Treat each row of data
-    dataRows.forEach(element => {        
+    dataRows.forEach(row => {        
         let flagNewPerson = false;
 
         // Check if already exists an object for the person searching by "eid"
-        var personData = lodash.find(outputData,function(person) {
-            return person.eid === element[1];
+        var personData = _.find(outputData,function(person) {
+            return person.eid === row[1];
         });
 
         // If don't exist an object, creates it and set the "eid" and default properties
         if (personData == undefined) { 
             flagNewPerson = true;
             personData = { 
-                "eid": element[1],
+                "eid": row[1],
+                "classes": [],
                 "invisible": false,
                 "see_all": false
             };
@@ -73,19 +83,31 @@ function extractCSVDataToJSON(csvData) {
         }
 
         // Set the person "fullname" property
-        personData.fullname = element[0];
+        personData.fullname = row[0];
 
         // Set the person "invisible" property
-        let invisible = element[element.length-2];
+        let invisible = row[row.length-2];
         if(invisible !== '') {
             invisible == 1 ? personData.invisible = true : personData.invisible = false;
         }
 
         // Set the person "see_all" property
-        let seeAll = element[element.length-1];
+        let seeAll = row[row.length-1];
         if(seeAll !== '') {
             seeAll === 'yes' ? personData.see_all = true : personData.see_all = false;
         }
+
+        // Get all classes and save them uniquely at "classes" array
+        classIndexes.forEach(classIndex => {
+            let classes = row[classIndex].split(/[^\w ]/);
+            classes = _.map(classes,_.trim);
+            classes.forEach(c => {
+                if(_.indexOf(personData.classes,c) < 0 && c !== '') {
+                    personData.classes.push(c);
+                }
+            });
+            
+        });
 
         console.log(personData);
         if(flagNewPerson) {

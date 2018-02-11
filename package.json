@@ -1,6 +1,6 @@
 {
     "name": "dev_challenge_classapp",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "description": "Dev Challenge ClassApp",
     "author": "Leonardo Batista <leonardohenriquebatista@gmail.com>",
     "main": "dev-challenge.js",
