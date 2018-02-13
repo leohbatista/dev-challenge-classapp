@@ -123,27 +123,34 @@ function extractCSVDataToJSON(csvData) {
             } else if (fieldInfo.type === "phone") {
                 addresses = extractAllPhonesFromString(row[addresssIndex]);
             }
-            
+
+            q = personData.addresses.reduce(function(qt,obj) {
+                return qt + (obj.type === fieldInfo.type && _.isEqual(obj.tags, fieldInfo.tags) ? 1 : 0);
+            }, 0);
+            console.log(q);
+
+            if(!flagNewPerson && fieldInfo.type === 'email' && _.compact(addresses).length >= q) {
+                console.log("ENTROU");
+                for (let i = 0; i < personData.addresses.length; i++) {
+                    var savedAddress = personData.addresses[i];
+                    if(savedAddress.type === 'email' && _.isEqual(savedAddress.tags, fieldInfo.tags)) {
+                        personData.addresses.splice(i,1);
+                    }
+                }           
+            }
+
+            //console.log(personData.addresses);
+
             addresses.forEach(a => {
                 let addressItem = JSON.parse(JSON.stringify(fieldInfo));
-                let flagUpdate = 0;
-
-                
+                let flagUpdate = 0;                
 
                 if(a !== '') {     
                     if(_.isEqual(personData.addresses,[])) {
                         addressItem.address = a;
-                    } else {
-                        
+                    } else {                        
                         personData.addresses.forEach(savedAddress => {
-                            if(addressItem.type === savedAddress.type && _.isEqual(savedAddress.tags, addressItem.tags)) {
-                                if(addressItem.type === 'email') {
-                                    savedAddress.address = a;
-                                    flagUpdate = 1;
-                                } else {
-                                    addressItem.address = a;                                
-                                }                             
-                            } else if (a === savedAddress.address && !_.isEqual(savedAddress.tags, addressItem.tags)) { 
+                            if (a === savedAddress.address && !_.isEqual(savedAddress.tags, addressItem.tags)) { 
                                 savedAddress.tags = _.union(savedAddress.tags, addressItem.tags);
                                 flagUpdate = 1;
                             } else {
