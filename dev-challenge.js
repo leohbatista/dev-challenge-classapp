@@ -1,7 +1,8 @@
 // Module imports
 const fs = require('fs');
 const _ = require('lodash');
-const libPhone = require('google-libphonenumber');
+const PNF = require('google-libphonenumber').PhoneNumberFormat;
+const phoneUtil = require('google-libphonenumber').PhoneNumberUtil.getInstance();
 const csv = require("fast-csv");
 
 // Constants
@@ -76,6 +77,7 @@ function extractCSVDataToJSON(csvData) {
             personData = { 
                 "eid": row[1],
                 "classes": [],
+                "addresses": [],
                 "invisible": false,
                 "see_all": false
             };
@@ -99,8 +101,7 @@ function extractCSVDataToJSON(csvData) {
 
         // Get all classes and save them uniquely at "classes" array
         classIndexes.forEach(classIndex => {
-            let classes = row[classIndex].split(/[^\w ]/);
-            classes = _.map(classes,_.trim);
+            let classes = extractAllClassesFromString(row[classIndex]);
             classes.forEach(c => {
                 if(_.indexOf(personData.classes,c) < 0 && c !== '') {
                     personData.classes.push(c);
@@ -109,19 +110,64 @@ function extractCSVDataToJSON(csvData) {
             
         });
 
-        console.log(personData);
+        // Get all classes and save them uniquely at "addresses" array
+        addressIndexes.forEach(addresssIndex => {
+            //console.log(row[addresssIndex]);
+            var addresses = [];            
+            var fieldInfo = tagInfo[addresssIndex];
+
+
+            // Split all addresses in the same field
+            if(fieldInfo.type === "email") {
+                addresses = extractAllEmailsFromString(row[addresssIndex]);
+            } else if (fieldInfo.type === "phone") {
+                addresses = extractAllPhonesFromString(row[addresssIndex]);
+            }
+            
+            addresses.forEach(a => {
+                let addressItem = JSON.parse(JSON.stringify(fieldInfo));
+                let flagUpdate = 0;
+
+                
+
+                if(a !== '') {     
+                    if(_.isEqual(personData.addresses,[])) {
+                        addressItem.address = a;
+                    } else {
+                        
+                        personData.addresses.forEach(savedAddress => {
+                            if(addressItem.type === savedAddress.type && _.isEqual(savedAddress.tags, addressItem.tags)) {
+                                if(addressItem.type === 'email') {
+                                    savedAddress.address = a;
+                                    flagUpdate = 1;
+                                } else {
+                                    addressItem.address = a;                                
+                                }                             
+                            } else if (a === savedAddress.address && !_.isEqual(savedAddress.tags, addressItem.tags)) { 
+                                savedAddress.tags = _.union(savedAddress.tags, addressItem.tags);
+                                flagUpdate = 1;
+                            } else {
+                                addressItem.address = a;                           
+                            }
+                        });
+                    }           
+                    
+                    if(!flagUpdate) {
+                        personData.addresses.push(addressItem);                        
+                    }
+
+                    flagUpdate = 0;                    
+                }
+            });
+            
+        });
+
         if(flagNewPerson) {
             outputData.push(personData);            
         }
     });
     
     console.log('Finish parsing data!');
-
-    /*
-    let test = JSON.parse(JSON.stringify(tagInfo[5]));
-    test.address = "5464646";
-    console.log(test);
-    console.log(tagInfo);*/
 }
 
 function generateOutputFile(output) {
@@ -131,3 +177,34 @@ function generateOutputFile(output) {
     });
     console.log(output);
 }
+
+// Extract all classes present on a string and return an array of them
+function extractAllClassesFromString(str) {
+    let classes = str.split(/[^\w ]/);
+    return _.map(classes,_.trim);
+}
+
+// Extract all emails present on a string and return an array of them
+function extractAllEmailsFromString(str) {
+    var ret = str.match(/([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)/g) ;
+    return ret == null ? [] : ret;
+}
+
+function extractAllPhonesFromString(str) {
+    var ret = [];
+    try {
+        var number = phoneUtil.parse(str, 'BR');
+        if (phoneUtil.isValidNumberForRegion(number,'BR')) {
+            ret.push(phoneUtil.format(number, PNF.E164).replace('+',''));
+        } else {
+            throw "INVALID_PHONE_ERROR";
+        }
+    } catch(err) {
+        ret.push('');
+    }
+    
+    return ret;
+}
+
+
+            
