@@ -80,12 +80,13 @@ function extractCSVDataToJSON(csvData) {
                 "addresses": [],
                 "invisible": false,
                 "see_all": false
-            };
-            
+            };            
         }
 
         // Set the person "fullname" property
-        personData.fullname = row[0];
+        if(row[0] !== '') {
+            personData.fullname = row[0];
+        }
 
         // Set the person "invisible" property
         let invisible = row[row.length-2];
@@ -121,16 +122,14 @@ function extractCSVDataToJSON(csvData) {
             if(fieldInfo.type === "email") {
                 addresses = extractAllEmailsFromString(row[addresssIndex]);
             } else if (fieldInfo.type === "phone") {
-                addresses = extractAllPhonesFromString(row[addresssIndex]);
+                addresses = parseAndValidatePhoneFromString(row[addresssIndex]);
             }
-
+// Refactor
             q = personData.addresses.reduce(function(qt,obj) {
                 return qt + (obj.type === fieldInfo.type && _.isEqual(obj.tags, fieldInfo.tags) ? 1 : 0);
             }, 0);
-            console.log(q);
 
-            if(!flagNewPerson && fieldInfo.type === 'email' && _.compact(addresses).length >= q) {
-                console.log("ENTROU");
+            if(!flagNewPerson && fieldInfo.type === 'email' && _.compact(addresses).length >= q) {                
                 for (let i = 0; i < personData.addresses.length; i++) {
                     var savedAddress = personData.addresses[i];
                     if(savedAddress.type === 'email' && _.isEqual(savedAddress.tags, fieldInfo.tags)) {
@@ -138,8 +137,6 @@ function extractCSVDataToJSON(csvData) {
                     }
                 }           
             }
-
-            //console.log(personData.addresses);
 
             addresses.forEach(a => {
                 let addressItem = JSON.parse(JSON.stringify(fieldInfo));
@@ -150,9 +147,11 @@ function extractCSVDataToJSON(csvData) {
                         addressItem.address = a;
                     } else {                        
                         personData.addresses.forEach(savedAddress => {
-                            if (a === savedAddress.address && !_.isEqual(savedAddress.tags, addressItem.tags)) { 
-                                savedAddress.tags = _.union(savedAddress.tags, addressItem.tags);
-                                flagUpdate = 1;
+                            if(a === savedAddress.address) {
+                                if(!_.isEqual(savedAddress.tags, addressItem.tags)) { 
+                                    savedAddress.tags = _.union(savedAddress.tags, addressItem.tags);
+                                    flagUpdate = 1;
+                                }
                             } else {
                                 addressItem.address = a;                           
                             }
@@ -165,8 +164,7 @@ function extractCSVDataToJSON(csvData) {
 
                     flagUpdate = 0;                    
                 }
-            });
-            
+            });            
         });
 
         if(flagNewPerson) {
@@ -182,7 +180,7 @@ function generateOutputFile(output) {
         if (err) throw err;
         console.log('Output written to file!');
     });
-    console.log(output);
+    //console.log(output);
 }
 
 // Extract all classes present on a string and return an array of them
@@ -197,7 +195,8 @@ function extractAllEmailsFromString(str) {
     return ret == null ? [] : ret;
 }
 
-function extractAllPhonesFromString(str) {
+// Extract all classes present on a string and return an array of them
+function parseAndValidatePhoneFromString(str) {
     var ret = [];
     try {
         var number = phoneUtil.parse(str, 'BR');
@@ -212,6 +211,3 @@ function extractAllPhonesFromString(str) {
     
     return ret;
 }
-
-
-            
